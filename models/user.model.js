@@ -32,6 +32,10 @@ const userSchema = new Schema(
       trim: true,
       match: [/.+@.+\..+/, "Please fill a valid email address"],
     },
+    walletAddress: {
+      type: String,
+      unique: true,
+    }
   },
   { timestamps: true }
 );

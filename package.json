@@ -1,7 +1,7 @@
 {
   "name": "nftbrozz",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,12 +12,24 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@openzeppelin/contracts": "^5.2.0",
+    "@rainbow-me/rainbowkit": "^2.2.4",
+    "axios": "^1.8.4",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
+    "ethers": "^6.13.5",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.0",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "tailwindcss": "^4.0.17",
+    "viem": "^2.24.1",
+    "wagmi": "^2.14.15",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.19"
   }
 }
