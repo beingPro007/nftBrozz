@@ -9,8 +9,10 @@ app.use(cors({
    origin: "*"
 }))
 
-import userRoute from "./routes/user.routes.js"
+import userRoute from "./routes/user.routes.js";
+import nftRouter from "./routes/nft.routes.js"
 
 app.use("/api/v1/users", userRoute);
+app.use("/api/v1/users/nft", nftRouter);
 
 export { app }

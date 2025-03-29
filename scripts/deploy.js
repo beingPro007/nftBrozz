@@ -1,15 +1,20 @@
-import hardhat from "hardhat";
+import hre from "hardhat";
 
 async function main() {
-    const NFTMarketplace = await hardhat.ethers.getContractFactory("NFTMarketplace");
-    const nftMarketplace = await NFTMarketplace.deploy("NFTBrozz", "NFTBZ");
+    const NFTMarketplace = await hre.ethers.getContractFactory("NFTMarketplace");
 
-    await nftMarketplace.waitForDeployment(); // Correct way to wait for deployment
+    const nftMarketplace = await NFTMarketplace.deploy("My NFT Marketplace", "MNFT");
 
-    console.log(`NFTMarketplace deployed to: ${await nftMarketplace.getAddress()}`);
+    await nftMarketplace.waitForDeployment();
+
+    const contractAddress = await nftMarketplace.getAddress();
+
+    console.log(`NFTMarketplace deployed to: ${contractAddress}`);
 }
 
-main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-});
+main()
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error(error);
+        process.exit(1);
+    });
