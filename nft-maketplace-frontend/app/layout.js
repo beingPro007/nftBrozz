@@ -50,15 +50,22 @@ export default function RootLayout({ children }) {
                 >
                   Mint NFT
                 </Link>
+
+                <Link
+                  href="/list-item"
+                  className={`text-lg font-medium ${pathname === '/list-item' ? 'text-primary' : 'text-muted-foreground'}`}
+                >
+                  List NFT
+                </Link>
               </div>
 
               {/* Right Section: Wallet & Profile */}
-              <div className="flex items-center space-x-auto">
+              {/* <div className="flex items-center space-x-auto">
                 <Header />
                 <Button variant="ghost" size="icon" className="md:hidden">
                   <Menu className="h-6 w-6" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
                 </Button>
-              </div>
+              </div> */}
             </nav>
 
             {/* Mobile Nav */}

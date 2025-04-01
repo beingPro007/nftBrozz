@@ -1,22 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import {
-  Activity,
-  Cloud,
-  Grid,
-  Home,
-  Menu,
-  Search,
-  ShoppingCart,
-  Sparkles,
-  User,
-  Wallet,
-  X,
-} from 'lucide-react';
-
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -25,26 +9,92 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import contractABI from '../../../artifacts/contracts/NFTMarketplace.sol/NFTMarketplace.json';
+import { ethers } from 'ethers';
 
 export default function Dashboard() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
+  const [nfts, setNfts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (nfts.length != 0) {
+      console.log('All NfTs data', nfts);
+    }
+  }, [nfts]);
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadNFTs() {
+      setLoading(true);
+      const contractAddress = '0x3539e7804AAaf4aB7b2404b34d7fc0465dA8E521';
+      const abi = contractABI.abi;
+      const provider = new ethers.JsonRpcProvider(
+        `https://eth-sepolia.g.alchemy.com/v2/KMHcDxjy115a3qGI3yJsKNz5pGVbTVQa`
+      );
+
+      const contract = new ethers.Contract(contractAddress, abi, provider);
+
+      try {
+        const tokenIds = await contract.getAllMintedNFTs();
+        const promises = tokenIds.map(async (tokenId) => {
+          try {
+            let uri = await contract.tokenURI(tokenId);
+
+            // 🛠️ Parse the URI if it's a JSON string
+            let metadata;
+            if (uri.startsWith('{')) {
+              metadata = JSON.parse(uri);
+            } else {
+              const response = await fetch(uri);
+              if (!response.ok) throw new Error('Invalid metadata URL');
+              metadata = await response.json();
+            }
+            console.log('Metadata is', metadata);
+
+            return {
+              tokenId: tokenId.toString(),
+              owner: await contract.ownerOf(tokenId),
+              name: metadata.name || `NFT #${tokenId}`,
+              image: metadata.image,
+              description: metadata.description || 'No description available',
+              attributes: metadata.attributes || [],
+            };
+          } catch (error) {
+            console.error(
+              `Error fetching metadata for Token ID ${tokenId}:`,
+              error
+            );
+            return null;
+          }
+        });
+
+        const nftDataArray = (await Promise.all(promises)).filter(
+          (nfts) => nfts !== null
+        );
+
+        if (isMounted) {
+          setNfts(nftDataArray);
+        }
+      } catch (error) {
+        console.error('Error loading NFTs:', error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadNFTs();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-background">
-
       {/* Main Content */}
       <div className="flex-1">
-
         {/* Dashboard Content */}
         <main className="flex-1 p-4 md:p-6 space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -118,57 +168,88 @@ export default function Dashboard() {
                 View All
               </Button>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {[1, 2, 3, 4].map((item) => (
-                <Card key={item} className="overflow-hidden">
-                  <div className="aspect-square relative">
-                    <img
-                      src={`/placeholder.svg?height=400&width=400&text=NFT ${item}`}
-                      alt={`NFT ${item}`}
-                      className="object-cover w-full h-full"
-                    />
-                    <Badge className="absolute top-2 right-2">
-                      {item === 1
-                        ? 'New'
-                        : item === 2
-                        ? 'Hot'
-                        : item === 3
-                        ? 'Rare'
-                        : 'Featured'}
-                    </Badge>
-                  </div>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">
-                      Cosmic Voyager #{item}00
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Current Bid
-                        </p>
-                        <p className="font-medium">
-                          {(Math.random() * 2 + 0.1).toFixed(2)} ETH
-                        </p>
+
+            {loading ? (
+              <div className="flex justify-center items-center min-h-[200px]">
+                <p className="text-gray-500">Loading NFTs...</p>
+              </div>
+            ) : nfts.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {nfts.map((nft, index) => {
+                  let imageUrl = nft.image;
+
+                  // Convert ipfs:// URL to a valid HTTP link
+                  if (imageUrl && imageUrl.startsWith('ipfs://')) {
+                    imageUrl = imageUrl.replace(
+                      'ipfs://',
+                      'https://ipfs.io/ipfs/'
+                    );
+                  }
+
+                  // Fix Cloudinary URLs missing protocol
+                  if (imageUrl && imageUrl.startsWith('http:/')) {
+                    imageUrl = imageUrl.replace('http:/', 'https://');
+                  }
+
+                  console.log(`NFT ${nft.tokenId} Image URL:`, imageUrl); // Debugging
+
+                  return (
+                    <Card key={nft.tokenId} className="overflow-hidden">
+                      <div className="aspect-square relative">
+                        <img
+                          src={imageUrl} // Fallback image
+                          alt={`NFT ${nft.tokenId}`}
+                          className="object-cover w-full h-full"
+                          onError={(e) => {
+                            e.target.src = '';
+                          }} // Handle broken images
+                        />
+                        <Badge className="absolute top-2 right-2">
+                          {index % 4 === 0
+                            ? 'New'
+                            : index % 4 === 1
+                            ? 'Hot'
+                            : index % 4 === 2
+                            ? 'Rare'
+                            : 'Featured'}
+                        </Badge>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">
-                          Ending In
-                        </p>
-                        <p className="font-medium">
-                          {Math.floor(Math.random() * 24)}h{' '}
-                          {Math.floor(Math.random() * 60)}m
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full">Place Bid</Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">
+                          {nft.name || `NFT #${nft.tokenId}`}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pb-2">
+                        <div className="flex justify-between">
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              Current Bid
+                            </p>
+                            <p className="font-medium">
+                              {(Math.random() * 2 + 0.1).toFixed(2)} ETH
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">
+                              Ending In
+                            </p>
+                            <p className="font-medium">
+                              {Math.floor(Math.random() * 24)}h{' '}
+                              {Math.floor(Math.random() * 60)}m
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button className="w-full">List Item</Button>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500">No NFTs found.</div>
+            )}
           </div>
 
           {/* Collections & Activity */}

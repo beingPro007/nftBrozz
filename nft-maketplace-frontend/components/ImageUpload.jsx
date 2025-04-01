@@ -1,30 +1,46 @@
 'use client';
+
 import { useState } from 'react';
+import { Axis3DIcon, UploadCloud } from 'lucide-react';
 import axios from 'axios';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { UploadCloud } from 'lucide-react';
 
-export default function ImageUpload({ onUploadSuccess }) {
-  const [image, setImage] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [uploading, setUploading] = useState(false);
+export function ImageUpload({ onUploadSuccess }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleImageChange = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setImage(file);
-    setPreview(URL.createObjectURL(file));
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
   };
 
-  const handleUpload = async () => {
-    if (!image) return alert('Please select an image first!');
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFileUpload(e.target.files[0]);
+    }
+  };
+
+  const handleFileUpload = async (file) => {
+    
+    setIsUploading(true);
+
+    const localImageUrl = URL.createObjectURL(file);
 
     const formData = new FormData();
-    formData.append('cloudinary-image', image);
+    formData.append('cloudinary-image', file);
 
-    setUploading(true);
     try {
       const res = await axios.post(
         'http://localhost:3000/api/v1/users/nft/upload-image',
@@ -33,50 +49,58 @@ export default function ImageUpload({ onUploadSuccess }) {
           headers: { 'Content-Type': 'multipart/form-data' },
         }
       );
-      console.log("Response received: ", res);
+
+      console.log("Response generated", res.data.imageUrl);
+      const imageUrl = res.data.imageUrl;
+      console.log("Image url is",imageUrl);
       
-      onUploadSuccess(res.data.imageUrl);
-    } catch (err) {
-      console.error('Upload failed', err);
-      alert('Upload failed. Try again.');
+      onUploadSuccess(imageUrl);
+      setIsUploading(false);
+      
+    } catch (error) {
+      console.log("Error occured while uploading the image to the cloud", error.message);
+      alert("Fail to upload the data to cloud");    
     }
-    setUploading(false);
+
   };
 
   return (
-    <Card className="w-80 p-4 shadow-lg flex flex-col items-center gap-4">
-      <h2 className="text-lg font-bold">Upload Image</h2>
-      {preview ? (
-        <img
-          src={preview}
-          alt="Preview"
-          className="w-40 h-40 rounded-md object-cover"
-        />
-      ) : (
-        <div className="w-40 h-40 flex items-center justify-center border-2 border-dashed rounded-md text-gray-400">
-          <UploadCloud size={32} />
-        </div>
-      )}
+    <div
+      className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+        isDragging
+          ? 'border-primary bg-primary/5'
+          : 'border-border hover:border-primary/50'
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onClick={() => document.getElementById('file-upload').click()}
+    >
       <input
+        id="file-upload"
         type="file"
-        accept="image/*"
-        onChange={handleImageChange}
         className="hidden"
-        id="fileInput"
+        accept="image/*"
+        onChange={handleFileChange}
       />
-      <label
-        htmlFor="fileInput"
-        className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-md"
-      >
-        Select Image
-      </label>
-      <Button
-        onClick={handleUpload}
-        className="bg-green-500 w-full"
-        disabled={uploading}
-      >
-        {uploading ? 'Uploading...' : 'Upload'}
-      </Button>
-    </Card>
+      <div className="flex flex-col items-center justify-center space-y-2">
+        <div className="rounded-full bg-primary/10 p-3">
+          <UploadCloud className="h-6 w-6 text-primary" />
+        </div>
+        <div className="text-sm font-medium">
+          {isUploading ? (
+            'Uploading...'
+          ) : (
+            <>
+              <span className="text-primary">Click to upload</span> or drag and
+              drop
+            </>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          PNG, JPG, GIF up to 10MB
+        </p>
+      </div>
+    </div>
   );
 }
